@@ -6,3 +6,11 @@ Do some async crap nicely
 04:56 < Qgosh> the issue is resource consumption logic for i/o
 04:56 < Qgosh> when its all async
 04:56 < Qgosh> becomes a mess
+
+
+## Running
+```
+$ ./createdatabase.sh
+$ stack build
+$ stack exec haskell-asyncplay-exe
+```
