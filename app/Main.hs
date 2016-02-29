@@ -20,12 +20,12 @@ instance FromRow StupidUser where
 allUsers :: Connection -> IO [StupidUser]
 allUsers c = query_ c "SELECT username, foocount FROM StupidUser;"
 
--- Make the requests asynchronously but only 2 at a time
-asyncUsers :: Connection -> Integer -> IO [[[StupidUser]]]
-asyncUsers c i =
+-- Retrieve n users but only i threads at a time.
+-- (Yes this is a totally contrived example that artificially limits the SQL query to returning 1 row at a time)
+asyncUsers :: Connection -> Integer -> Int -> IO [[[StupidUser]]]
+asyncUsers c n i =
   let q = "SELECT username, foocount FROM StupidUser offset ? fetch next ? rows only;"
-      concurrentReqs = 2  -- Limit to 2 concurrent requests
-      pages = chunksOf concurrentReqs [0..i]
+      pages = chunksOf i [0..n]
   in
     mapM (mapConcurrently (\j -> query c q (j, 1 :: Integer))) pages
 
@@ -40,5 +40,5 @@ main = do
   mapM_ print users
 
   Prelude.putStrLn "Asynchronous query"
-  usersagain <- asyncUsers conn 3
+  usersagain <- asyncUsers conn 3 2
   mapM_ print usersagain
