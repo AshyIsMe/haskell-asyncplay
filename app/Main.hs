@@ -22,10 +22,7 @@ allUsers c = query_ c "SELECT username, foocount FROM StupidUser;"
 asyncUsers :: Connection -> Integer -> IO [[StupidUser]]
 asyncUsers c i =
   let q = "SELECT username, foocount FROM StupidUser offset ? fetch next ? rows only;"
-  in do
-    as <- mapM (\j -> async $ query c q (j, 1 :: Integer)) [0..i]
-    mapM wait as
-
+  in mapConcurrently (\j -> query c q (j, 1 :: Integer)) [0..i]
 
 connectionString :: ByteString
 connectionString = fromString "dbname='asyncplay'"
