@@ -2,12 +2,13 @@
 
 module Main where
 
+import Control.Concurrent.Async
+import Data.ByteString hiding (concat, concatMap, map)
+import Data.List.Split (chunksOf)
+import Data.String (fromString)
+import Data.Text hiding (chunksOf, concat, concatMap, map)
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromRow
-import Data.Text
-import Data.ByteString
-import Data.String (fromString)
-import Control.Concurrent.Async
 
 data StupidUser = StupidUser { userName :: Text
                  , fooCount :: Integer
@@ -19,10 +20,14 @@ instance FromRow StupidUser where
 allUsers :: Connection -> IO [StupidUser]
 allUsers c = query_ c "SELECT username, foocount FROM StupidUser;"
 
-asyncUsers :: Connection -> Integer -> IO [[StupidUser]]
+-- Make the requests asynchronously but only 2 at a time
+asyncUsers :: Connection -> Integer -> IO [[[StupidUser]]]
 asyncUsers c i =
   let q = "SELECT username, foocount FROM StupidUser offset ? fetch next ? rows only;"
-  in mapConcurrently (\j -> query c q (j, 1 :: Integer)) [0..i]
+      concurrentReqs = 2  -- Limit to 2 concurrent requests
+      pages = chunksOf concurrentReqs [0..i]
+  in
+    mapM (mapConcurrently (\j -> query c q (j, 1 :: Integer))) pages
 
 connectionString :: ByteString
 connectionString = fromString "dbname='asyncplay'"
